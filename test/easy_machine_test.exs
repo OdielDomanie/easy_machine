@@ -1,12 +1,12 @@
-defmodule StateMachineTest do
+defmodule EasyMachineTest do
   use ExUnit.Case
-  doctest StateMachine
+  doctest EasyMachine
 
   test "state machine" do
-    defmodule StateMachineTest.M do
-      use StateMachine
+    defmodule EasyMachineTest.M do
+      use EasyMachine
 
-      def init_state, do: :init
+      @init_state :init
       def init_data, do: nil
 
       def action_j(data, _event), do: {data, :some_command}
@@ -33,9 +33,9 @@ defmodule StateMachineTest do
       end
     end
 
-    sm = StateMachineTest.M.state_machine()
-    assert {sm, :some_command} = StateMachine.event(sm, :init_event)
-    assert {sm, :some_other_command} = StateMachine.event(sm, :event_y)
-    assert :state_b == StateMachine.current_state(sm)
+    sm = EasyMachineTest.M.state_machine()
+    assert {sm, :some_command} = EasyMachine.event(sm, :init_event)
+    assert {sm, :some_other_command} = EasyMachine.event(sm, :event_y)
+    assert :state_b == EasyMachine.current_state(sm)
   end
 end

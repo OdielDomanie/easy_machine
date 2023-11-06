@@ -1,5 +1,5 @@
-defmodule StateMachine.DiagramD2 do
-  @spec to_d2(StateMachine.machine_spec()) :: String.t()
+defmodule EasyMachine.DiagramD2 do
+  @spec to_d2(EasyMachine.machine_spec()) :: String.t()
   def to_d2(sm_spec) do
     {init_state, transitions} = sm_spec
 
@@ -51,5 +51,14 @@ defmodule StateMachine.DiagramD2 do
     ast
     |> Macro.to_string()
     |> String.replace(~r|[^a-zA-Z_/&]|, fn char -> "\\" <> char end)
+  end
+
+  if Mix.env() == :dev do
+    def svg(d2) do
+      {:ok, %Rambo{status: 0, out: svg, err: _err}} =
+        Rambo.run("d2", ["--theme", "200", "--dark-theme", "200", "-", "-"], in: d2)
+
+      svg
+    end
   end
 end

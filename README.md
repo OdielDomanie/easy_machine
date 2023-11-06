@@ -1,16 +1,16 @@
-# StateMachine
+# EasyMachine
 
 **TODO: Add description**
 
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `state_machine` to your list of dependencies in `mix.exs`:
+by adding `easy_machine` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
   [
-    {:state_machine, "~> 0.1.0"}
+    {:easy_machine, "~> 0.1.0"}
   ]
 end
 ```
