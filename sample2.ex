@@ -1,5 +1,5 @@
 defmodule Sample2SM do
-  use StateMachine, svg_file: true
+  use EasyMachine, svg_file: true
 
   @init_state :init
   def init_data, do: nil

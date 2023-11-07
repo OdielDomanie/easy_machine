@@ -36,7 +36,7 @@ defmodule EasyMachine do
     iex> {sm, :some_command} = EasyMachine.event(sm, :init_event)
     iex> {sm, :some_other_command} = EasyMachine.event(sm, :event_y)
     iex> EasyMachine.current_state(sm)
-    :state_b
+    [:state_b]
     ```
 
   """
@@ -104,10 +104,10 @@ defmodule EasyMachine do
 
   defp normalize_state_match(state_match) do
     case state_match do
-      sp when not is_list(sp) -> {[sp], quote(do: true)}
       {:when, _, [sp, guard]} when not is_list(sp) -> {[sp], guard}
-      sp when is_list(sp) -> {sp, quote(do: true)}
       {:when, _, [sp, guard]} when is_list(sp) -> {sp, guard}
+      sp when not is_list(sp) -> {[sp], quote(do: true)}
+      sp when is_list(sp) -> {sp, quote(do: true)}
     end
   end
 
@@ -133,6 +133,12 @@ defmodule EasyMachine do
             next_state -> {next_state, nil}
           end
 
+        next_state =
+          case is_list(next_state) do
+            true -> next_state
+            false -> [next_state]
+          end
+
         {query_match, action, next_state}
       end
 
@@ -146,7 +152,14 @@ defmodule EasyMachine do
   end
 
   defp parse_to_transition(sm, em, next_state) do
+    next_state =
+      cond do
+        is_list(next_state) -> next_state
+        not is_list(next_state) -> [next_state]
+      end
+
     state_transition = {sm, next_state, em}
+
     {nil, state_transition}
   end
 
@@ -226,6 +239,8 @@ defmodule EasyMachine do
     quote line: line do
       def transition(unquote(curr_state), data, unquote(event_pattern) = event)
           when unquote(curr_state_guard) and unquote(event_guard) do
+        # supress warning
+        _ = unquote(curr_state)
         {data, command} = unquote(action).(data, event)
         {unquote(next_state), data, command}
       end
@@ -263,6 +278,9 @@ defmodule EasyMachine do
     quote line: line do
       def transition(unquote(curr_state), data, unquote(event_pattern) = event)
           when unquote(curr_state_guard) and unquote(event_guard) do
+        # supress warning
+        _ = unquote(curr_state)
+
         case unquote(query).(data, event),
           do: unquote(macroed_query_match_action_nextstate)
       end

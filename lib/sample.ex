@@ -34,4 +34,4 @@ end
 sm = SampleSM.state_machine()
 {sm, :some_command} = EasyMachine.event(sm, :init_event)
 {sm, :some_other_command} = EasyMachine.event(sm, :event_y)
-:state_b = EasyMachine.current_state(sm)
+[:state_b] = EasyMachine.current_state(sm)
