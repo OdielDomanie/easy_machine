@@ -3,44 +3,87 @@ defmodule EasyMachine.DiagramD2 do
   def to_d2(sm_spec) do
     {init_state, transitions} = sm_spec
 
+    all_possible_states = [init_state | enumerate_states(transitions)] |> Enum.uniq()
+
     d2 = "#{state_to_d2(init_state)}\n"
 
     for transition <- transitions, into: d2 do
       case transition do
-        {action, {curr_state, next_state, event_match}} ->
-          "#{state_to_d2(curr_state)}" <>
-            " -> " <>
-            "#{state_to_d2(next_state)}: " <>
-            "#{ast_to_d2(event_match)}" <>
-            case action do
-              nil -> ""
-              action -> "\\n#{ast_to_d2(action)}"
-            end <>
-            "\n"
+        {action, {{curr_pattern, cur_guard}, next_state, event_match}} ->
+          for possible_curr_state <- all_possible_states, into: "" do
+            quote do
+              case unquote(possible_curr_state) do
+                unquote(curr_pattern) = actual_curr_state when unquote(cur_guard) ->
+                  actual_next_state = unquote(next_state)
+                  {:ok, actual_curr_state, actual_next_state}
 
-        {:conditional, curr_state, event_match, query, match_act_nextstate} ->
-          query_node = "query_" <> (System.unique_integer() |> to_string)
+                _ ->
+                  :nomatch
+              end
+            end
+            |> Code.eval_quoted()
+            |> elem(0)
+            |> case do
+              {:ok, actual_curr_state, actual_next_state} ->
+                "#{state_to_d2(actual_curr_state)} -> #{state_to_d2(actual_next_state)}: #{ast_to_d2(event_match)}" <>
+                  case action do
+                    nil -> ""
+                    action -> "\\n#{ast_to_d2(action)}"
+                  end <>
+                  "\n\n"
 
-          curr_to_query =
-            "#{query_node}: " <>
-              "#{ast_to_d2(query)}\n" <>
-              "#{query_node}.shape: diamond\n" <>
-              "#{query_node}.width: 1\n" <>
-              "#{query_node}.style.bold: false\n" <>
-              "#{state_to_d2(curr_state)}" <>
-              " -> " <>
-              "#{query_node}:" <>
-              "#{ast_to_d2(event_match)}\n"
+              :nomatch ->
+                ""
+            end
+          end
 
-          for {match, act, next_state} <- match_act_nextstate, into: curr_to_query do
-            "#{query_node} -> " <>
-              "#{state_to_d2(next_state)}: " <>
-              "#{ast_to_d2(match)}" <>
-              case act do
-                nil -> ""
-                action -> "\\n#{ast_to_d2(action)}"
-              end <>
-              "\n"
+        {:conditional, {curr_pattern, cur_guard}, event_match, query, match_act_nextstate} ->
+          for possible_curr_state <- all_possible_states, into: "" do
+            query_node = "query_" <> (System.unique_integer() |> to_string)
+
+            curr_to_query =
+              "#{query_node}: #{ast_to_d2(query)}\n" <>
+                "#{query_node}.shape: diamond\n" <>
+                "#{query_node}.width: 1\n" <>
+                "#{query_node}.style.bold: false\n" <>
+                "#{state_to_d2(possible_curr_state)} -> #{query_node}: #{ast_to_d2(event_match)}\n\n"
+
+            query_to_nexts =
+              for {match, action, next_state} <- match_act_nextstate, into: "" do
+                quote do
+                  case unquote(possible_curr_state) do
+                    unquote(curr_pattern) = actual_curr_state when unquote(cur_guard) ->
+                      actual_next_state = unquote(next_state)
+                      {:ok, actual_curr_state, actual_next_state}
+
+                    _ ->
+                      :nomatch
+                  end
+                end
+                |> Code.eval_quoted()
+                |> elem(0)
+                |> case do
+                  {:ok, _actual_curr_state, actual_next_state} ->
+                    # query_to_next
+                    "#{query_node} -> " <>
+                      "#{state_to_d2(actual_next_state)}: " <>
+                      "#{ast_to_d2(match)}" <>
+                      case action do
+                        nil -> ""
+                        action -> "\\n#{ast_to_d2(action)}"
+                      end <>
+                      "\n"
+
+                  :nomatch ->
+                    ""
+                end
+              end
+
+            if query_to_nexts != "" do
+              curr_to_query <> query_to_nexts
+            else
+              ""
+            end
           end
       end <>
         "\n"
@@ -78,7 +121,7 @@ defmodule EasyMachine.DiagramD2 do
   @type var_state :: {match_current :: Macro.t(), nonempty_list(pattern_next :: Macro.t())}
 
   def enumerate_states(transitions) do
-    var_states = var_states(transitions) |> IO.inspect()
+    var_states = var_states(transitions)
 
     concrete_states = conc_states(var_states)
 
@@ -90,7 +133,6 @@ defmodule EasyMachine.DiagramD2 do
             unquote(curr_state_pattern) when unquote(curr_state_guard) ->
               _ = unquote(conc_state)
               _ = unquote(curr_state_pattern)
-              IO.inspect(unquote(Macro.escape(pattern_next)))
               {:ok, unquote(pattern_next)}
 
             _no_match ->
@@ -104,11 +146,12 @@ defmodule EasyMachine.DiagramD2 do
     matching_var_states
     |> Enum.filter(fn v -> v != :no_match end)
     |> Enum.map(fn {:ok, v} -> v end)
-    |> IO.inspect()
+
+    # |> IO.inspect()
   end
 
   def var_states(transitions) do
-    for {transition, _line} <- transitions do
+    for transition <- transitions do
       case transition do
         {_action, {{curr_state_pattern, guard}, next_state_pattern, _event_match}} ->
           [{{curr_state_pattern, guard}, next_state_pattern}]
