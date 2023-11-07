@@ -12,9 +12,9 @@ defmodule Sample3SM do
     :init_event -> [:state_a, :sub_state_x] \\ &action_j/2
   end
 
-  state [:state_a, sub_state] do
+  state [:state_a | sub_state] do
     :event_x ->
-      [:state_a, sub_state] \\ &action_k/2
+      [:state_a | sub_state] \\ &action_k/2
 
     :event_y ->
       query &query_fun/2 do
@@ -23,7 +23,7 @@ defmodule Sample3SM do
       end
   end
 
-  state [some_state, :substate] do
+  state [some_state, :substate | rest] do
     :event_x -> [some_state, :substate]
   end
 end

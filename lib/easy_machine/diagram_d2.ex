@@ -5,7 +5,9 @@ defmodule EasyMachine.DiagramD2 do
 
     all_possible_states = [init_state | enumerate_states(transitions)] |> Enum.uniq()
 
-    d2 = "#{state_to_d2(init_state)}\n"
+    d2 =
+      "#{state_to_d2(init_state)}\n" <>
+        "#{state_to_d2(init_state)}.shape: circle\n"
 
     for transition <- transitions, into: d2 do
       case transition do
