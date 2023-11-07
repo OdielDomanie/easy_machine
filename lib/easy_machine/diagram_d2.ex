@@ -14,6 +14,7 @@ defmodule EasyMachine.DiagramD2 do
             quote do
               case unquote(possible_curr_state) do
                 unquote(curr_pattern) = actual_curr_state when unquote(cur_guard) ->
+                  _ = unquote(curr_pattern)
                   actual_next_state = unquote(next_state)
                   {:ok, actual_curr_state, actual_next_state}
 
@@ -39,7 +40,7 @@ defmodule EasyMachine.DiagramD2 do
 
         {:conditional, {curr_pattern, cur_guard}, event_match, query, match_act_nextstate} ->
           for possible_curr_state <- all_possible_states, into: "" do
-            query_node = "query_" <> (System.unique_integer() |> to_string)
+            query_node = "query_" <> ast_to_d2(possible_curr_state)
 
             curr_to_query =
               "#{query_node}: #{ast_to_d2(query)}\n" <>
@@ -53,6 +54,7 @@ defmodule EasyMachine.DiagramD2 do
                 quote do
                   case unquote(possible_curr_state) do
                     unquote(curr_pattern) = actual_curr_state when unquote(cur_guard) ->
+                      _ = unquote(curr_pattern)
                       actual_next_state = unquote(next_state)
                       {:ok, actual_curr_state, actual_next_state}
 
@@ -111,7 +113,7 @@ defmodule EasyMachine.DiagramD2 do
   if Mix.env() == :dev do
     def svg(d2) do
       {:ok, %Rambo{status: 0, out: svg, err: _err}} =
-        Rambo.run("d2", ["--theme", "200", "--dark-theme", "200", "-", "-"], in: d2)
+        Rambo.run("d2", ["--theme", "200", "--dark-theme", "200", "-", "-"], in: d2, log: false)
 
       svg
     end
